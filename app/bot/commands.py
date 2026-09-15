@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Iterator
 
 import discord
 from discord import app_commands
@@ -40,7 +40,9 @@ class CalendarCommands(commands.Cog):
         self.bot = bot
         self.container = container
 
-    @app_commands.command(name="calendar-link", description="Google Calendarを連携します")
+    @app_commands.command(
+        name="calendar-link", description="Google Calendarを連携します"
+    )
     async def calendar_link(self, interaction: discord.Interaction) -> None:
         with db_session(self.container) as session:
             url = self.container.oauth.create_authorization_url(
@@ -54,7 +56,9 @@ class CalendarCommands(commands.Cog):
             ephemeral=True,
         )
 
-    @app_commands.command(name="calendar-status", description="Google Calendarの連携状態を確認します")
+    @app_commands.command(
+        name="calendar-status", description="Google Calendarの連携状態を確認します"
+    )
     async def calendar_status(self, interaction: discord.Interaction) -> None:
         with db_session(self.container) as session:
             account = Repository(session).get_account(interaction.user.id)
@@ -65,7 +69,9 @@ class CalendarCommands(commands.Cog):
             )
         await interaction.response.send_message(message, ephemeral=True)
 
-    @app_commands.command(name="calendar-unlink", description="Google Calendar連携を解除します")
+    @app_commands.command(
+        name="calendar-unlink", description="Google Calendar連携を解除します"
+    )
     async def calendar_unlink(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
 
@@ -77,13 +83,19 @@ class CalendarCommands(commands.Cog):
                     return False
                 try:
                     self.container.calendar.revoke(account)
-                except Exception:
-                    logger.warning("Google token revoke failed for user %s", interaction.user.id)
+                except GoogleCalendarError:
+                    logger.warning(
+                        "Google token revoke failed for user %s", interaction.user.id
+                    )
                 repository.delete_account(interaction.user.id)
                 return True
 
         removed = await asyncio.to_thread(unlink)
-        message = "✅ Google Calendar連携を解除しました。" if removed else "Google Calendarは未連携です。"
+        message = (
+            "✅ Google Calendar連携を解除しました。"
+            if removed
+            else "Google Calendarは未連携です。"
+        )
         await interaction.followup.send(message, ephemeral=True)
 
 
@@ -92,7 +104,10 @@ class ScheduleCommands(commands.Cog):
         self.bot = bot
         self.container = container
 
-    @app_commands.command(name="schedule-add", description="複数メンバーのGoogle Calendarへ予定を登録します")
+    @app_commands.command(
+        name="schedule-add",
+        description="複数メンバーのGoogle Calendarへ予定を登録します",
+    )
     @app_commands.describe(
         title="予定名",
         date="日付（YYYY-MM-DD）",
@@ -120,24 +135,34 @@ class ScheduleCommands(commands.Cog):
         description: app_commands.Range[str, 0, 2000] | None = None,
     ) -> None:
         if interaction.guild_id is None:
-            await interaction.response.send_message("このコマンドはサーバー内で使用してください。", ephemeral=True)
+            await interaction.response.send_message(
+                "このコマンドはサーバー内で使用してください。", ephemeral=True
+            )
             return
         try:
-            start_at = parse_schedule_datetime(date, start_time, self.container.settings.default_timezone)
-            end_at = parse_schedule_datetime(date, end_time, self.container.settings.default_timezone)
+            start_at = parse_schedule_datetime(
+                date, start_time, self.container.settings.default_timezone
+            )
+            end_at = parse_schedule_datetime(
+                date, end_time, self.container.settings.default_timezone
+            )
             if end_at <= start_at:
                 raise ScheduleValidationError("終了時刻は開始時刻より後にしてください")
         except ScheduleValidationError as exc:
             await interaction.response.send_message(str(exc), ephemeral=True)
             return
 
-        members = [member for member in (member1, member2, member3, member4, member5) if member]
+        members = [
+            member for member in (member1, member2, member3, member4, member5) if member
+        ]
         await interaction.response.defer(ephemeral=True, thinking=True)
 
         def create_schedule():
             with db_session(self.container) as session:
                 service = ScheduleService(
-                    session, self.container.calendar, self.container.settings.default_timezone
+                    session,
+                    self.container.calendar,
+                    self.container.settings.default_timezone,
                 )
                 return service.create(
                     guild_id=interaction.guild_id,
@@ -163,11 +188,17 @@ class ScheduleCommands(commands.Cog):
         )
         await interaction.followup.send("\n".join(lines), ephemeral=True)
 
-    @app_commands.command(name="schedule-delete", description="Botが作成した予定を削除します")
+    @app_commands.command(
+        name="schedule-delete", description="Botが作成した予定を削除します"
+    )
     @app_commands.describe(event_id="予定登録時に表示されたBot Event ID")
-    async def schedule_delete(self, interaction: discord.Interaction, event_id: int) -> None:
+    async def schedule_delete(
+        self, interaction: discord.Interaction, event_id: int
+    ) -> None:
         if interaction.guild_id is None:
-            await interaction.response.send_message("このコマンドはサーバー内で使用してください。", ephemeral=True)
+            await interaction.response.send_message(
+                "このコマンドはサーバー内で使用してください。", ephemeral=True
+            )
             return
         await interaction.response.defer(ephemeral=True, thinking=True)
         permissions = getattr(interaction.user, "guild_permissions", None)
@@ -176,7 +207,9 @@ class ScheduleCommands(commands.Cog):
         def delete_schedule():
             with db_session(self.container) as session:
                 service = ScheduleService(
-                    session, self.container.calendar, self.container.settings.default_timezone
+                    session,
+                    self.container.calendar,
+                    self.container.settings.default_timezone,
                 )
                 return service.delete(
                     event_id=event_id,
@@ -196,4 +229,3 @@ class ScheduleCommands(commands.Cog):
             for item in result.members
         )
         await interaction.followup.send("\n".join(lines), ephemeral=True)
-

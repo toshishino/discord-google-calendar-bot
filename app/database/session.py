@@ -8,7 +8,9 @@ from app.database.models import Base
 
 
 def create_db_engine(database_url: str) -> Engine:
-    connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
+    connect_args = (
+        {"check_same_thread": False} if database_url.startswith("sqlite") else {}
+    )
     engine = create_engine(database_url, connect_args=connect_args)
     if database_url.startswith("sqlite"):
         event.listen(engine, "connect", _enable_sqlite_foreign_keys)
@@ -39,4 +41,3 @@ def session_scope(factory: sessionmaker[Session]) -> Iterator[Session]:
         raise
     finally:
         session.close()
-

@@ -41,4 +41,3 @@ def test_oauth_state_is_single_use() -> None:
             pass
         else:
             raise AssertionError("state must not be reusable")
-

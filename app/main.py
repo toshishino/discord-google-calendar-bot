@@ -19,7 +19,12 @@ async def run() -> None:
     bot = CalendarBot(container)
     api = create_app(container)
     server = uvicorn.Server(
-        uvicorn.Config(api, host=settings.host, port=settings.port, log_level=settings.log_level.lower())
+        uvicorn.Config(
+            api,
+            host=settings.host,
+            port=settings.port,
+            log_level=settings.log_level.lower(),
+        )
     )
 
     try:
@@ -32,4 +37,3 @@ async def run() -> None:
 
 if __name__ == "__main__":
     asyncio.run(run())
-

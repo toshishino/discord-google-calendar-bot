@@ -50,7 +50,9 @@ class GoogleCalendarService:
                 credentials.refresh(Request())
             except Exception as exc:
                 raise GoogleReauthRequired("Googleとの再連携が必要です") from exc
-            account.encrypted_access_token = self.crypto.encrypt(credentials.token) or ""
+            account.encrypted_access_token = (
+                self.crypto.encrypt(credentials.token) or ""
+            )
             account.token_expiry = credentials.expiry
         return credentials
 
@@ -70,16 +72,24 @@ class GoogleCalendarService:
         timezone_name: str,
     ) -> str:
         credentials = self.ensure_fresh_credentials(account)
-        service = build("calendar", "v3", credentials=credentials, cache_discovery=False)
+        service = build(
+            "calendar", "v3", credentials=credentials, cache_discovery=False
+        )
         body = {
             "summary": title,
             "description": description or "",
             "start": {"dateTime": start_at.isoformat(), "timeZone": timezone_name},
             "end": {"dateTime": end_at.isoformat(), "timeZone": timezone_name},
-            "extendedProperties": {"private": {"createdBy": "discord-google-calendar-bot"}},
+            "extendedProperties": {
+                "private": {"createdBy": "discord-google-calendar-bot"}
+            },
         }
         try:
-            created = service.events().insert(calendarId=account.calendar_id, body=body).execute()
+            created = (
+                service.events()
+                .insert(calendarId=account.calendar_id, body=body)
+                .execute()
+            )
         except HttpError as exc:
             raise GoogleCalendarError("Google Calendarへの登録に失敗しました") from exc
         event_id = created.get("id")
@@ -89,7 +99,9 @@ class GoogleCalendarService:
 
     def delete_event(self, account: GoogleAccount, google_event_id: str) -> None:
         credentials = self.ensure_fresh_credentials(account)
-        service = build("calendar", "v3", credentials=credentials, cache_discovery=False)
+        service = build(
+            "calendar", "v3", credentials=credentials, cache_discovery=False
+        )
         try:
             service.events().delete(
                 calendarId=account.calendar_id, eventId=google_event_id
@@ -97,17 +109,22 @@ class GoogleCalendarService:
         except HttpError as exc:
             if getattr(exc.resp, "status", None) in {404, 410}:
                 return
-            raise GoogleCalendarError("Google Calendarからの削除に失敗しました") from exc
+            raise GoogleCalendarError(
+                "Google Calendarからの削除に失敗しました"
+            ) from exc
 
     def revoke(self, account: GoogleAccount) -> None:
-        token = self.crypto.decrypt(account.encrypted_refresh_token) or self.crypto.decrypt(
-            account.encrypted_access_token
-        )
+        token = self.crypto.decrypt(
+            account.encrypted_refresh_token
+        ) or self.crypto.decrypt(account.encrypted_access_token)
         if token:
-            requests.post(
-                "https://oauth2.googleapis.com/revoke",
-                params={"token": token},
-                headers={"content-type": "application/x-www-form-urlencoded"},
-                timeout=10,
-            )
-
+            try:
+                response = requests.post(
+                    "https://oauth2.googleapis.com/revoke",
+                    params={"token": token},
+                    headers={"content-type": "application/x-www-form-urlencoded"},
+                    timeout=10,
+                )
+                response.raise_for_status()
+            except requests.RequestException as exc:
+                raise GoogleCalendarError("Google連携の解除通知に失敗しました") from exc

@@ -33,4 +33,3 @@ class Container:
             oauth=GoogleOAuthService(settings),
             calendar=GoogleCalendarService(settings, crypto),
         )
-

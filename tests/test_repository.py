@@ -34,4 +34,3 @@ def test_create_event_and_member() -> None:
         assert stored is not None
         assert stored.event_id == event.id
         assert stored.google_event_id == "google-event"
-

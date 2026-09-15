@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import timezone
 from html import escape
 
@@ -10,6 +11,8 @@ from app.container import Container
 from app.database.repositories import Repository
 from app.google.oauth import OAuthStateError
 
+logger = logging.getLogger(__name__)
+
 
 def create_app(container: Container) -> FastAPI:
     app = FastAPI(title="Discord Google Calendar Bot", docs_url=None, redoc_url=None)
@@ -19,16 +22,26 @@ def create_app(container: Container) -> FastAPI:
         return {"status": "ok"}
 
     @app.get("/oauth/google/callback", response_class=HTMLResponse)
-    def google_callback(request: Request, state: str | None = None, error: str | None = None):
+    def google_callback(
+        request: Request, state: str | None = None, error: str | None = None
+    ):
         if error:
-            return _page("連携をキャンセルしました", "Discordに戻って、必要ならもう一度お試しください。", False)
+            return _page(
+                "連携をキャンセルしました",
+                "Discordに戻って、必要ならもう一度お試しください。",
+                False,
+            )
         if not state or "code" not in request.query_params:
             raise HTTPException(status_code=400, detail="code or state is missing")
 
         session = container.session_factory()
         try:
-            identity = container.oauth.validate_and_consume_state(state, Repository(session))
-            credentials = container.oauth.exchange_code(request.query_params["code"], state)
+            identity = container.oauth.validate_and_consume_state(
+                state, Repository(session)
+            )
+            credentials = container.oauth.exchange_code(
+                request.query_params["code"], state
+            )
             google_user_id, google_email = container.calendar.get_identity(credentials)
             repository = Repository(session)
             existing = repository.get_account(identity.discord_user_id)
@@ -43,7 +56,11 @@ def create_app(container: Container) -> FastAPI:
                 google_email=google_email,
                 encrypted_access_token=container.crypto.encrypt(credentials.token),
                 encrypted_refresh_token=encrypted_refresh_token,
-                token_expiry=(credentials.expiry.replace(tzinfo=timezone.utc) if credentials.expiry and credentials.expiry.tzinfo is None else credentials.expiry),
+                token_expiry=(
+                    credentials.expiry.replace(tzinfo=timezone.utc)
+                    if credentials.expiry and credentials.expiry.tzinfo is None
+                    else credentials.expiry
+                ),
                 calendar_id="primary",
             )
             session.commit()
@@ -52,17 +69,29 @@ def create_app(container: Container) -> FastAPI:
             return _page("連携リンクが無効です", str(exc), False, status_code=400)
         except Exception:
             session.rollback()
-            return _page("Google Calendar連携に失敗しました", "Discordからもう一度連携してください。", False, status_code=500)
+            logger.exception("Google OAuth callback failed")
+            return _page(
+                "Google Calendar連携に失敗しました",
+                "Discordからもう一度連携してください。",
+                False,
+                status_code=500,
+            )
         finally:
             session.close()
 
         account_label = escape(google_email or "Googleアカウント")
-        return _page("連携が完了しました", f"{account_label} をDiscordユーザーに紐付けました。この画面は閉じて構いません。", True)
+        return _page(
+            "連携が完了しました",
+            f"{account_label} をDiscordユーザーに紐付けました。この画面は閉じて構いません。",
+            True,
+        )
 
     return app
 
 
-def _page(title: str, message: str, success: bool, status_code: int = 200) -> HTMLResponse:
+def _page(
+    title: str, message: str, success: bool, status_code: int = 200
+) -> HTMLResponse:
     color = "#3ba55d" if success else "#ed4245"
     html = f"""<!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

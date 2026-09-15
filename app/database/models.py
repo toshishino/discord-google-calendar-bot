@@ -23,10 +23,16 @@ class GoogleAccount(Base):
     google_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     encrypted_access_token: Mapped[str] = mapped_column(Text)
     encrypted_refresh_token: Mapped[str | None] = mapped_column(Text, nullable=True)
-    token_expiry: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    token_expiry: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     calendar_id: Mapped[str] = mapped_column(String(255), default="primary")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
 
 class BotEvent(Base):
@@ -40,8 +46,12 @@ class BotEvent(Base):
     end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_by: Mapped[int] = mapped_column(BigInteger)
     status: Mapped[str] = mapped_column(String(32), default="active")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     members: Mapped[list[EventMember]] = relationship(
         back_populates="event", cascade="all, delete-orphan", lazy="selectin"
@@ -53,13 +63,19 @@ class EventMember(Base):
     __table_args__ = (UniqueConstraint("event_id", "discord_user_id"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    event_id: Mapped[int] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"), index=True)
+    event_id: Mapped[int] = mapped_column(
+        ForeignKey("events.id", ondelete="CASCADE"), index=True
+    )
     discord_user_id: Mapped[int] = mapped_column(BigInteger, index=True)
     google_event_id: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     status: Mapped[str] = mapped_column(String(32))
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     event: Mapped[BotEvent] = relationship(back_populates="members")
 
@@ -70,5 +86,6 @@ class OAuthState(Base):
     nonce: Mapped[str] = mapped_column(String(128), primary_key=True)
     discord_user_id: Mapped[int] = mapped_column(BigInteger, index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )

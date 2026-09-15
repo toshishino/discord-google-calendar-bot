@@ -12,7 +12,9 @@ class Repository:
 
     def get_account(self, discord_user_id: int) -> GoogleAccount | None:
         return self.session.scalar(
-            select(GoogleAccount).where(GoogleAccount.discord_user_id == discord_user_id)
+            select(GoogleAccount).where(
+                GoogleAccount.discord_user_id == discord_user_id
+            )
         )
 
     def upsert_account(self, **values) -> GoogleAccount:
@@ -28,12 +30,20 @@ class Repository:
 
     def delete_account(self, discord_user_id: int) -> bool:
         result = self.session.execute(
-            delete(GoogleAccount).where(GoogleAccount.discord_user_id == discord_user_id)
+            delete(GoogleAccount).where(
+                GoogleAccount.discord_user_id == discord_user_id
+            )
         )
         return bool(result.rowcount)
 
-    def save_oauth_state(self, nonce: str, discord_user_id: int, expires_at: datetime) -> None:
-        self.session.add(OAuthState(nonce=nonce, discord_user_id=discord_user_id, expires_at=expires_at))
+    def save_oauth_state(
+        self, nonce: str, discord_user_id: int, expires_at: datetime
+    ) -> None:
+        self.session.add(
+            OAuthState(
+                nonce=nonce, discord_user_id=discord_user_id, expires_at=expires_at
+            )
+        )
 
     def consume_oauth_state(self, nonce: str) -> OAuthState | None:
         state = self.session.get(OAuthState, nonce)
@@ -49,7 +59,11 @@ class Repository:
         return state
 
     def purge_expired_oauth_states(self) -> None:
-        self.session.execute(delete(OAuthState).where(OAuthState.expires_at <= datetime.now(timezone.utc)))
+        self.session.execute(
+            delete(OAuthState).where(
+                OAuthState.expires_at <= datetime.now(timezone.utc)
+            )
+        )
 
     def create_event(
         self,
@@ -95,6 +109,7 @@ class Repository:
 
     def get_event(self, event_id: int, guild_id: int) -> BotEvent | None:
         return self.session.scalar(
-            select(BotEvent).where(BotEvent.id == event_id, BotEvent.guild_id == guild_id)
+            select(BotEvent).where(
+                BotEvent.id == event_id, BotEvent.guild_id == guild_id
+            )
         )
-

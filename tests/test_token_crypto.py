@@ -15,4 +15,3 @@ def test_encrypt_decrypt_round_trip() -> None:
 def test_invalid_key_is_rejected() -> None:
     with pytest.raises(TokenCryptoError):
         TokenCrypto("invalid")
-

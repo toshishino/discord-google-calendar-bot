@@ -45,4 +45,3 @@ def test_create_continues_when_a_member_is_not_linked() -> None:
 
         assert [item.success for item in result.members] == [True, False]
         assert result.members[1].message == "Google Calendar未連携"
-

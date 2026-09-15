@@ -10,7 +10,6 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from app.config import Settings
 from app.database.repositories import Repository
 
-
 GOOGLE_SCOPES = [
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
@@ -32,7 +31,9 @@ class OAuthIdentity:
 class GoogleOAuthService:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
-        self.serializer = URLSafeTimedSerializer(settings.oauth_state_secret, salt="google-oauth-state")
+        self.serializer = URLSafeTimedSerializer(
+            settings.oauth_state_secret, salt="google-oauth-state"
+        )
 
     @property
     def client_config(self) -> dict:
@@ -46,13 +47,19 @@ class GoogleOAuthService:
             }
         }
 
-    def create_authorization_url(self, discord_user_id: int, repository: Repository) -> str:
+    def create_authorization_url(
+        self, discord_user_id: int, repository: Repository
+    ) -> str:
         nonce = secrets.token_urlsafe(32)
-        expires_at = datetime.now(timezone.utc) + timedelta(seconds=STATE_MAX_AGE_SECONDS)
+        expires_at = datetime.now(timezone.utc) + timedelta(
+            seconds=STATE_MAX_AGE_SECONDS
+        )
         repository.purge_expired_oauth_states()
         repository.save_oauth_state(nonce, discord_user_id, expires_at)
 
-        state = self.serializer.dumps({"discord_user_id": str(discord_user_id), "nonce": nonce})
+        state = self.serializer.dumps(
+            {"discord_user_id": str(discord_user_id), "nonce": nonce}
+        )
         flow = Flow.from_client_config(
             self.client_config,
             scopes=GOOGLE_SCOPES,
@@ -66,7 +73,9 @@ class GoogleOAuthService:
         )
         return url
 
-    def validate_and_consume_state(self, state: str, repository: Repository) -> OAuthIdentity:
+    def validate_and_consume_state(
+        self, state: str, repository: Repository
+    ) -> OAuthIdentity:
         try:
             payload = self.serializer.loads(state, max_age=STATE_MAX_AGE_SECONDS)
             discord_user_id = int(payload["discord_user_id"])

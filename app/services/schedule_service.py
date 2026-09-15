@@ -7,7 +7,11 @@ from zoneinfo import ZoneInfo
 from sqlalchemy.orm import Session
 
 from app.database.repositories import Repository
-from app.google.calendar import GoogleCalendarError, GoogleCalendarService, GoogleReauthRequired
+from app.google.calendar import (
+    GoogleCalendarError,
+    GoogleCalendarService,
+    GoogleReauthRequired,
+)
 
 
 class ScheduleValidationError(ValueError):
@@ -27,12 +31,18 @@ class ScheduleResult:
     members: list[MemberResult]
 
 
-def parse_schedule_datetime(date_value: str, time_value: str, timezone_name: str) -> datetime:
+def parse_schedule_datetime(
+    date_value: str, time_value: str, timezone_name: str
+) -> datetime:
     try:
-        local = datetime.strptime(f"{date_value} {time_value}", "%Y-%m-%d %H:%M")
+        local = datetime.strptime(
+            f"{date_value} {time_value}", "%Y-%m-%d %H:%M"
+        ).replace(tzinfo=ZoneInfo(timezone_name))
     except ValueError as exc:
-        raise ScheduleValidationError("日付は YYYY-MM-DD、時刻は HH:MM で入力してください") from exc
-    return local.replace(tzinfo=ZoneInfo(timezone_name))
+        raise ScheduleValidationError(
+            "日付は YYYY-MM-DD、時刻は HH:MM で入力してください"
+        ) from exc
+    return local
 
 
 def validate_schedule(start_at: datetime, end_at: datetime) -> None:
@@ -41,7 +51,9 @@ def validate_schedule(start_at: datetime, end_at: datetime) -> None:
 
 
 class ScheduleService:
-    def __init__(self, session: Session, calendar: GoogleCalendarService, timezone_name: str) -> None:
+    def __init__(
+        self, session: Session, calendar: GoogleCalendarService, timezone_name: str
+    ) -> None:
         self.session = session
         self.repository = Repository(session)
         self.calendar = calendar
@@ -123,7 +135,9 @@ class ScheduleService:
         self.session.commit()
         return ScheduleResult(event.id, results)
 
-    def delete(self, *, event_id: int, guild_id: int, requested_by: int, is_admin: bool) -> ScheduleResult:
+    def delete(
+        self, *, event_id: int, guild_id: int, requested_by: int, is_admin: bool
+    ) -> ScheduleResult:
         event = self.repository.get_event(event_id, guild_id)
         if event is None or event.status == "deleted":
             raise ScheduleValidationError("対象の予定が見つかりません")
@@ -132,14 +146,21 @@ class ScheduleService:
 
         results: list[MemberResult] = []
         for member in event.members:
-            if not member.google_event_id or member.status not in {"created", "delete_failed"}:
-                results.append(MemberResult(member.discord_user_id, False, "登録済み予定なし"))
+            if not member.google_event_id or member.status not in {
+                "created",
+                "delete_failed",
+            }:
+                results.append(
+                    MemberResult(member.discord_user_id, False, "登録済み予定なし")
+                )
                 continue
             account = self.repository.get_account(member.discord_user_id)
             if account is None:
                 member.status = "delete_failed"
                 member.error_message = "Google Calendar未連携"
-                results.append(MemberResult(member.discord_user_id, False, member.error_message))
+                results.append(
+                    MemberResult(member.discord_user_id, False, member.error_message)
+                )
                 continue
             try:
                 self.calendar.delete_event(account, member.google_event_id)
@@ -149,7 +170,9 @@ class ScheduleService:
             except GoogleCalendarError:
                 member.status = "delete_failed"
                 member.error_message = "Google Calendarからの削除に失敗しました"
-                results.append(MemberResult(member.discord_user_id, False, member.error_message))
+                results.append(
+                    MemberResult(member.discord_user_id, False, member.error_message)
+                )
 
         event.status = (
             "partial_delete"

@@ -32,11 +32,12 @@ class CalendarBot(commands.Bot):
     async def on_ready(self) -> None:
         logger.info("Discord bot logged in as %s", self.user)
 
-    async def on_tree_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError) -> None:
+    async def on_tree_error(
+        self, interaction: discord.Interaction, error: app_commands.AppCommandError
+    ) -> None:
         logger.exception("Unhandled slash-command error", exc_info=error)
         message = "処理中にエラーが発生しました。時間をおいて再度お試しください。"
         if interaction.response.is_done():
             await interaction.followup.send(message, ephemeral=True)
         else:
             await interaction.response.send_message(message, ephemeral=True)
-
