@@ -75,6 +75,41 @@ GET http://localhost:8000/health
 
 Google OAuth callbackはブラウザから到達できる必要があります。Codespacesで試す場合はポート8000を公開し、そのHTTPS URLを `GOOGLE_REDIRECT_URI` とGoogle Cloud側のAuthorized redirect URIへ設定してください。
 
+## GitHub Codespaces
+
+リポジトリの **Code > Codespaces > Create codespace on main** から作成します。初回起動時に次が自動で準備されます。
+
+- Python 3.12
+- Python開発・デバッグ拡張
+- Ruffによるフォーマット・静的チェック
+- Docker Engine / Docker Compose
+- GitHub CLI
+- YAML・Docker・SQLite確認用のVS Code拡張
+- Python依存ライブラリ
+- `.env.example` からローカル専用 `.env` の作成
+- 自動テスト
+
+起動後は `.env` の次の項目を設定します。
+
+```text
+DISCORD_BOT_TOKEN
+DISCORD_GUILD_ID
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+GOOGLE_REDIRECT_URI
+TOKEN_ENCRYPTION_KEY
+OAUTH_STATE_SECRET
+PUBLIC_BASE_URL
+```
+
+Codespacesの「ポート」画面で8000番を公開し、表示されたHTTPS URLの末尾へ `/oauth/google/callback` を付けたものを `GOOGLE_REDIRECT_URI` とGoogle CloudのAuthorized redirect URIへ同じ値で登録してください。
+
+設定後の起動コマンド：
+
+```bash
+python -m app.main
+```
+
 ## Docker
 
 ```bash
