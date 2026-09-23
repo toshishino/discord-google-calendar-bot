@@ -6,7 +6,7 @@
       "installZsh": false,
       "installOhMyZsh": false
     },
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+    "ghcr.io/devcontainers/features/docker-in-docker:4": {
       "version": "latest",
       "dockerDashComposeVersion": "v2"
     },
@@ -29,7 +29,7 @@
         "ms-python.vscode-pylance",
         "ms-python.debugpy",
         "charliermarsh.ruff",
-        "ms-azuretools.vscode-docker",
+        "ms-azuretools.vscode-containers",
         "redhat.vscode-yaml",
         "qwtel.sqlite-viewer",
         "github.vscode-pull-request-github"
