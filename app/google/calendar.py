@@ -97,6 +97,70 @@ class GoogleCalendarService:
             raise GoogleCalendarError("Google CalendarからEvent IDが返りませんでした")
         return str(event_id)
 
+    def list_busy_intervals(
+        self,
+        account: GoogleAccount,
+        start_at: datetime,
+        end_at: datetime,
+    ) -> list[tuple[datetime, datetime]]:
+        """List every blocking event, including recurring instances and all-day."""
+        from zoneinfo import ZoneInfo
+
+        from app.services.availability_service import validate_window
+
+        validate_window(start_at, end_at)
+        credentials = self.ensure_fresh_credentials(account)
+        service = build(
+            "calendar", "v3", credentials=credentials, cache_discovery=False
+        )
+        busy = []
+        page_token = None
+        try:
+            while True:
+                response = (
+                    service.events()
+                    .list(
+                        calendarId=account.calendar_id,
+                        timeMin=start_at.isoformat(),
+                        timeMax=end_at.isoformat(),
+                        singleEvents=True,
+                        orderBy="startTime",
+                        maxResults=2500,
+                        pageToken=page_token,
+                    )
+                    .execute()
+                )
+                tz = ZoneInfo(response.get("timeZone", self.settings.default_timezone))
+                for event in response.get("items", []):
+                    if (
+                        event.get("status") == "cancelled"
+                        or event.get("transparency") == "transparent"
+                    ):
+                        continue
+
+                    def parse(value, tz=tz):
+                        if "dateTime" in value:
+                            result = datetime.fromisoformat(
+                                value["dateTime"].replace("Z", "+00:00")
+                            )
+                            if result.utcoffset() is None:
+                                result = result.replace(
+                                    tzinfo=ZoneInfo(value.get("timeZone", str(tz)))
+                                )
+                            return result
+                        return datetime.fromisoformat(value["date"]).replace(tzinfo=tz)
+
+                    left, right = parse(event["start"]), parse(event["end"])
+                    if right <= left:
+                        raise ValueError("Invalid event interval")
+                    busy.append((left, right))
+                page_token = response.get("nextPageToken")
+                if not page_token:
+                    break
+        except (HttpError, KeyError, ValueError) as exc:
+            raise GoogleCalendarError("予定の取得に失敗しました") from exc
+        return busy
+
     def delete_event(self, account: GoogleAccount, google_event_id: str) -> None:
         credentials = self.ensure_fresh_credentials(account)
         service = build(
