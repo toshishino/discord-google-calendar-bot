@@ -146,3 +146,18 @@ Google APIは実トークンを使わず、日時・暗号化・OAuth state・DB
 - キーを変更する場合は既存ユーザーの再連携が必要です。
 
 詳細は [docs/DESIGN.md](docs/DESIGN.md) を参照してください。
+
+## MCP学習ブランチ：読み取りと候補提示
+
+自分のカレンダーを参照するローカルstdio MCP Serverを追加しました。
+AIは候補を整理し、都合の調整・日時の選択・確定は人間が行います。
+Google連携不要のデモ：
+
+```bash
+pip install -r requirements-dev.txt
+python scripts/mcp_demo.py
+```
+
+変更前後の構成、コードを読む順番、実カレンダー接続手順は
+[docs/MCP_BEFORE_AFTER.md](docs/MCP_BEFORE_AFTER.md) を参照してください。
+通常のBotの起動は従来どおり `python -m app.main` です。

@@ -12,6 +12,7 @@ class Settings(BaseSettings):
 
     discord_bot_token: str
     discord_guild_id: int | None = None
+    mcp_discord_user_id: int | None = Field(default=None, gt=0)
 
     google_client_id: str
     google_client_secret: str
